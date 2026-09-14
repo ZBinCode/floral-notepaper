@@ -24,7 +24,8 @@
     "untitledNote": "無標題筆記",
     "untitledFile": "未命名檔案",
     "wordCount": "{{count}} 字",
-    "wordCountUnit": "字"
+    "wordCountUnit": "字",
+    "edit": "編輯"
   },
   "contextMenu": {
     "edit": {
@@ -444,11 +445,17 @@
     },
     "empty": {
       "title": "還沒有清單",
-      "hint": "建立第一個清單，開始整理待辦"
+      "hint": "建立第一個清單，開始整理待辦",
+      "filtered": "該標籤下沒有待辦"
     },
     "list": {
       "namePlaceholder": "清單名稱",
-      "create": "建立"
+      "create": "建立",
+      "settings": "清單設定",
+      "defaultTags": "預設標籤：{{tags}}",
+      "defaultTagsHint": "在此清單新增待辦時自動附加",
+      "delete": "刪除清單",
+      "deleteConfirm": "確認刪除？"
     },
     "item": {
       "addPlaceholder": "新增待辦…",
@@ -458,7 +465,8 @@
       "pin": "置頂",
       "unpin": "取消置頂",
       "delete": "刪除",
-      "due": "設定目標日"
+      "due": "設定目標日",
+      "tags": "標籤"
     },
     "countdown": {
       "overdue": "已過期 {{count}} 天",
@@ -476,6 +484,15 @@
       "unitMonth": "月",
       "unitYear": "年",
       "everyInterval": "每 {{interval}} {{unit}}"
+    },
+    "tags": {
+      "manage": "管理標籤",
+      "filterAll": "全部",
+      "newPlaceholder": "新標籤名",
+      "create": "新增",
+      "empty": "還沒有標籤",
+      "delete": "刪除標籤",
+      "deleteConfirm": "確認？"
     }
   }
 }

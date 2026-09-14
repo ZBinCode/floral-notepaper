@@ -24,7 +24,8 @@
     "untitledNote": "无标题笔记",
     "untitledFile": "未命名文件",
     "wordCount": "{{count}} 字",
-    "wordCountUnit": "字"
+    "wordCountUnit": "字",
+    "edit": "编辑"
   },
   "contextMenu": {
     "edit": {
@@ -463,11 +464,17 @@
     },
     "empty": {
       "title": "还没有清单",
-      "hint": "创建第一个清单，开始整理待办"
+      "hint": "创建第一个清单，开始整理待办",
+      "filtered": "该标签下没有待办"
     },
     "list": {
       "namePlaceholder": "清单名称",
-      "create": "创建"
+      "create": "创建",
+      "settings": "清单设置",
+      "defaultTags": "默认标签：{{tags}}",
+      "defaultTagsHint": "在此清单新建待办时自动附加",
+      "delete": "删除清单",
+      "deleteConfirm": "确认删除？"
     },
     "item": {
       "addPlaceholder": "添加待办…",
@@ -477,7 +484,8 @@
       "pin": "置顶",
       "unpin": "取消置顶",
       "delete": "删除",
-      "due": "设置目标日"
+      "due": "设置目标日",
+      "tags": "标签"
     },
     "countdown": {
       "overdue": "已过期 {{count}} 天",
@@ -495,6 +503,15 @@
       "unitMonth": "月",
       "unitYear": "年",
       "everyInterval": "每 {{interval}} {{unit}}"
+    },
+    "tags": {
+      "manage": "管理标签",
+      "filterAll": "全部",
+      "newPlaceholder": "新标签名",
+      "create": "新建",
+      "empty": "还没有标签",
+      "delete": "删除标签",
+      "deleteConfirm": "确认？"
     }
   }
 }

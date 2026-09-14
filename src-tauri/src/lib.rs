@@ -177,6 +177,18 @@ fn todo_lists_delete(app: AppHandle, id: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
+fn todo_lists_set_default_tags(
+    app: AppHandle,
+    id: String,
+    tag_ids: Vec<String>,
+) -> Result<TodoList, AppError> {
+    let list =
+        todos_service::default_store()?.set_list_default_tags(&id, &tag_ids, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(list)
+}
+
+#[tauri::command]
 fn todo_lists_reorder(app: AppHandle, ordered_ids: Vec<String>) -> Result<Vec<TodoList>, AppError> {
     let lists = todos_service::default_store()?.reorder_lists(&ordered_ids, chrono::Utc::now())?;
     let _ = app.emit("todos-changed", ());
@@ -645,6 +657,7 @@ pub fn run() {
             todo_lists_create,
             todo_lists_rename,
             todo_lists_delete,
+            todo_lists_set_default_tags,
             todo_lists_reorder,
             todo_tags_list,
             todo_tags_create,

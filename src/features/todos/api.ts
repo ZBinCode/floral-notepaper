@@ -28,6 +28,10 @@ export function deleteTodoList(id: string): Promise<void> {
   return invoke("todo_lists_delete", { id });
 }
 
+export function setTodoListDefaultTags(id: string, tagIds: string[]): Promise<TodoList> {
+  return invoke("todo_lists_set_default_tags", { id, tagIds });
+}
+
 export function reorderTodoLists(orderedIds: string[]): Promise<TodoList[]> {
   return invoke("todo_lists_reorder", { orderedIds });
 }

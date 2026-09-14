@@ -3,14 +3,19 @@ import { getFixedT } from "i18next";
 import { i18n } from "../../locales";
 import type { TodoItem, TodoList } from "./types";
 import {
+  TODO_TAG_PALETTE,
   arrayMove,
+  filterTodoItemsByTag,
   groupTodoItems,
+  hashString,
   parseTodoDate,
   reorderIdsAfterDrop,
   sortTodoItems,
   todoCountdown,
   todoCountdownLabel,
   todoRecurrenceLabel,
+  todoTagColor,
+  toggleTagId,
 } from "./todoUtils";
 
 const today = new Date(2026, 8, 14);
@@ -139,6 +144,41 @@ describe("reorderIdsAfterDrop", () => {
     expect(reorderIdsAfterDrop(["a", "b", "c", "d"], "a", 3)).toEqual(["b", "c", "d", "a"]);
     expect(reorderIdsAfterDrop(["a", "b", "c", "d"], "d", 0)).toEqual(["d", "a", "b", "c"]);
     expect(reorderIdsAfterDrop(["a", "b"], "missing", 1)).toEqual(["a", "b"]);
+  });
+});
+
+describe("todoTagColor", () => {
+  it("prefers the saved color", () => {
+    expect(todoTagColor({ name: "工作", color: "#ff0000" })).toBe("#ff0000");
+    expect(todoTagColor({ name: "工作", color: "  " })).not.toBe("");
+  });
+
+  it("derives a stable palette color from the tag name", () => {
+    const first = todoTagColor({ name: "紧急", color: "" });
+    const second = todoTagColor({ name: "紧急", color: "" });
+    expect(first).toBe(second);
+    expect([...TODO_TAG_PALETTE]).toContain(first);
+  });
+
+  it("hashString returns stable non-negative values", () => {
+    expect(hashString("花笺")).toBe(hashString("花笺"));
+    expect(hashString("花笺")).not.toBe(hashString("花信"));
+    expect(hashString("")).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("filterTodoItemsByTag and toggleTagId", () => {
+  it("filters items by tag id and passes everything when null", () => {
+    const entries = [item({ id: "a", tagIds: ["t1"] }), item({ id: "b", tagIds: ["t2"] })];
+    expect(filterTodoItemsByTag(entries, "t1").map((entry) => entry.id)).toEqual(["a"]);
+    expect(filterTodoItemsByTag(entries, null)).toHaveLength(2);
+  });
+
+  it("toggles tag ids without mutating the input", () => {
+    const base = ["t1", "t2"];
+    expect(toggleTagId(base, "t3")).toEqual(["t1", "t2", "t3"]);
+    expect(toggleTagId(base, "t1")).toEqual(["t2"]);
+    expect(base).toEqual(["t1", "t2"]);
   });
 });
 

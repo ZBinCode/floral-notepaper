@@ -1,5 +1,42 @@
 import type { TFunction } from "i18next";
-import type { TodoItem, TodoList, TodoRecurrenceRule, SaveTodoItemRequest } from "./types";
+import type { TodoItem, TodoList, TodoRecurrenceRule, SaveTodoItemRequest, TodoTag } from "./types";
+
+/** 标签调色板：低饱和的自然色系，与 bamboo 主题色协调 */
+export const TODO_TAG_PALETTE = [
+  "#7fa98c",
+  "#e2a85f",
+  "#d97b66",
+  "#8f9fd6",
+  "#b58cc9",
+  "#6fb3c4",
+  "#c9a227",
+  "#a8a29a",
+] as const;
+
+export function hashString(value: string): number {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) + hash + value.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/** 标签颜色：优先使用已保存颜色，缺省时按名字哈希落到调色板（同名稳定） */
+export function todoTagColor(tag: Pick<TodoTag, "name" | "color">): string {
+  const saved = tag.color?.trim();
+  if (saved) return saved;
+  return TODO_TAG_PALETTE[hashString(tag.name) % TODO_TAG_PALETTE.length];
+}
+
+/** 按标签跨清单筛选（null 表示不过滤） */
+export function filterTodoItemsByTag(items: TodoItem[], tagId: string | null): TodoItem[] {
+  if (!tagId) return items;
+  return items.filter((item) => item.tagIds.includes(tagId));
+}
+
+export function toggleTagId(tagIds: readonly string[], tagId: string): string[] {
+  return tagIds.includes(tagId) ? tagIds.filter((id) => id !== tagId) : [...tagIds, tagId];
+}
 
 export interface TodoCountdown {
   kind: "overdue" | "today" | "upcoming";

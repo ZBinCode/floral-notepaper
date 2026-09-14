@@ -24,7 +24,8 @@
     "untitledNote": "Untitled Note",
     "untitledFile": "Untitled File",
     "wordCount": "{{count}} characters",
-    "wordCountUnit": "characters"
+    "wordCountUnit": "characters",
+    "edit": "Edit"
   },
   "contextMenu": {
     "edit": {
@@ -463,11 +464,17 @@
     },
     "empty": {
       "title": "No lists yet",
-      "hint": "Create your first list to get started"
+      "hint": "Create your first list to get started",
+      "filtered": "No todos under this tag"
     },
     "list": {
       "namePlaceholder": "List name",
-      "create": "Create"
+      "create": "Create",
+      "settings": "List settings",
+      "defaultTags": "Default tags: {{tags}}",
+      "defaultTagsHint": "Auto-attached to new todos in this list",
+      "delete": "Delete list",
+      "deleteConfirm": "Confirm?"
     },
     "item": {
       "addPlaceholder": "Add a todo…",
@@ -477,7 +484,8 @@
       "pin": "Pin",
       "unpin": "Unpin",
       "delete": "Delete",
-      "due": "Set target date"
+      "due": "Set target date",
+      "tags": "Tags"
     },
     "countdown": {
       "overdue": "{{count}} days overdue",
@@ -495,6 +503,15 @@
       "unitMonth": "months",
       "unitYear": "years",
       "everyInterval": "Every {{interval}} {{unit}}"
+    },
+    "tags": {
+      "manage": "Manage tags",
+      "filterAll": "All",
+      "newPlaceholder": "New tag name",
+      "create": "Create",
+      "empty": "No tags yet",
+      "delete": "Delete tag",
+      "deleteConfirm": "Sure?"
     }
   }
 }

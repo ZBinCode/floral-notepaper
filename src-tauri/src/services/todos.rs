@@ -465,6 +465,33 @@ impl TodoStore {
         Ok(updated)
     }
 
+    /// 配置清单的默认标签（新建待办时自动附加）；未知标签 id 直接报错
+    pub fn set_list_default_tags(
+        &self,
+        id: &str,
+        tag_ids: &[String],
+        now: DateTime<Utc>,
+    ) -> Result<TodoList, AppError> {
+        let mut file = self.load_store_file()?;
+        let default_tag_ids = self.existing_tag_ids(&file, tag_ids)?;
+        let list = file
+            .lists
+            .iter_mut()
+            .find(|list| list.id == id)
+            .ok_or_else(|| {
+                todo_error(
+                    "todoListNotFound",
+                    format!("清单 {id} 不存在"),
+                    Some(("listId", id)),
+                )
+            })?;
+        list.default_tag_ids = default_tag_ids;
+        list.updated_at = now;
+        let updated = list.clone();
+        self.save_store_file(&file)?;
+        Ok(updated)
+    }
+
     /// 级联删除清单下的活跃待办；归档条目保留（历史回顾不受清单删除影响）
     pub fn delete_list(&self, id: &str) -> Result<(), AppError> {
         let mut file = self.load_store_file()?;
@@ -1479,6 +1506,41 @@ mod tests {
         let archive = store.query_archive(None, None).expect("archive");
         assert_eq!(archive.len(), 1);
         assert_eq!(archive[0].list_name, "临时项目");
+    }
+
+    #[test]
+    fn set_list_default_tags_validates_and_applies() {
+        let store = test_store("list-default-tags");
+        let now = at(2026, 9, 14, 10);
+
+        let tag = store
+            .create_tag(
+                CreateTodoTagRequest {
+                    name: "工作".into(),
+                    color: String::new(),
+                },
+                now,
+            )
+            .expect("create tag");
+        let list = store
+            .create_list(list_request("清单"), now)
+            .expect("create list");
+
+        let updated = store
+            .set_list_default_tags(&list.id, &[tag.id.clone()], now)
+            .expect("set default tags");
+        assert_eq!(updated.default_tag_ids, vec![tag.id.clone()]);
+
+        // 新建待办自动获得默认标签
+        let item = store
+            .create_item(item_request(&list.id, "任务"), now)
+            .expect("create item");
+        assert_eq!(item.tag_ids, vec![tag.id.clone()]);
+
+        assert!(store
+            .set_list_default_tags(&list.id, &["missing".into()], now)
+            .is_err());
+        assert!(store.set_list_default_tags("missing", &[], now).is_err());
     }
 
     #[test]
