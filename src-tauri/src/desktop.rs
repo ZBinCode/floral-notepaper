@@ -1110,6 +1110,13 @@ pub async fn toggle_tile_window(
     toggle_tile_window_now(&app, &note_id, bounds)
 }
 
+pub async fn open_todo_window(
+    app: AppHandle,
+    bounds: Option<WindowBounds>,
+) -> Result<String, AppError> {
+    open_todo_window_now(&app, bounds)
+}
+
 pub fn extract_file_arg(args: &[String]) -> Option<String> {
     args.iter()
         .find(|arg| {
@@ -1810,6 +1817,36 @@ fn toggle_tile_window_now(
     Ok(true)
 }
 
+const TODO_BOARD_WINDOW_LABEL: &str = "todo-board";
+
+fn todo_board_window_specs() -> WindowSizeSpec {
+    WindowSizeSpec {
+        width: 360.0,
+        height: 560.0,
+        min_width: 300.0,
+        min_height: 380.0,
+    }
+}
+
+fn open_todo_window_now(app: &AppHandle, bounds: Option<WindowBounds>) -> Result<String, AppError> {
+    let locale = configured_locale();
+
+    open_or_focus_window(
+        app,
+        TODO_BOARD_WINDOW_LABEL,
+        WindowOpenOptions {
+            url: "index.html?view=todo".to_string(),
+            title: locales::todo_board_window_title(locale).to_string(),
+            specs: todo_board_window_specs(),
+            decorations: false,
+            always_on_top: false,
+            shadow: true,
+            skip_taskbar: false,
+            bounds,
+        },
+    )
+}
+
 fn open_or_focus_window(
     app: &AppHandle,
     label: &str,
@@ -1886,8 +1923,10 @@ fn tile_window_label(note_id: &str) -> String {
 }
 
 fn dynamic_window_visual_options(label: &str) -> DynamicWindowVisualOptions {
-    let is_app_surface =
-        label == MAIN_WINDOW_LABEL || label.starts_with("notepad-") || label.starts_with("tile-");
+    let is_app_surface = label == MAIN_WINDOW_LABEL
+        || label.starts_with("notepad-")
+        || label.starts_with("tile-")
+        || label.starts_with("todo-");
 
     DynamicWindowVisualOptions {
         transparent: is_app_surface,
@@ -2808,6 +2847,9 @@ mod tests {
         assert!(windows
             .iter()
             .any(|window| window.as_str() == Some("notepad-*")));
+        assert!(windows
+            .iter()
+            .any(|window| window.as_str() == Some("todo-*")));
         assert!(permissions
             .iter()
             .any(|permission| permission.as_str() == Some("core:window:allow-set-focus")));

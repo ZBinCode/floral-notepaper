@@ -22,6 +22,10 @@ export function toggleTileWindow(noteId: string, bounds?: WindowBounds): Promise
   return invoke("toggle_tile_window", { noteId, bounds: bounds ?? null });
 }
 
+export function openTodoBoardWindow(bounds?: WindowBounds): Promise<string> {
+  return invoke("open_todo_window", { bounds: bounds ?? null });
+}
+
 export function openNoteInEditor(noteId: string): Promise<void> {
   return invoke("open_note_in_editor", { noteId });
 }

@@ -54,7 +54,17 @@
     "unsupportedFile": "Only .md files are supported",
     "unsupportedImageFormat": "Unsupported image format",
     "unsupportedShortcut": "{{field}} configuration is invalid",
-    "unsupportedShortcutGeneric": "Shortcut configuration is invalid"
+    "unsupportedShortcutGeneric": "Shortcut configuration is invalid",
+    "todoListNameEmpty": "List name cannot be empty",
+    "todoListNameExists": "List \"{{name}}\" already exists",
+    "todoListNotFound": "List not found",
+    "todoTagNameEmpty": "Tag name cannot be empty",
+    "todoTagNameExists": "Tag \"{{name}}\" already exists",
+    "todoTagNotFound": "Tag not found",
+    "todoItemNotFound": "Todo not found",
+    "todoArchiveEntryNotFound": "Archive entry not found",
+    "todoTitleEmpty": "Todo title cannot be empty",
+    "todoRecurrenceInvalid": "Invalid recurrence rule"
   },
   "markdown": {
     "copied": "Copied",
@@ -157,7 +167,8 @@
       "about": "About",
       "quickNotepad": "Quick Note",
       "restore": "Restore",
-      "settings": "Settings"
+      "settings": "Settings",
+      "todoBoard": "Todo Board"
     }
   },
   "noteMenu": {
@@ -441,5 +452,49 @@
   },
   "tile": {
     "empty": "Empty"
+  },
+  "todo": {
+    "title": "Todo",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "window": {
+      "pin": "Pin window",
+      "close": "Close"
+    },
+    "empty": {
+      "title": "No lists yet",
+      "hint": "Create your first list to get started"
+    },
+    "list": {
+      "namePlaceholder": "List name",
+      "create": "Create"
+    },
+    "item": {
+      "addPlaceholder": "Add a todo…",
+      "empty": "Nothing in this list yet",
+      "completed": "Completed \"{{title}}\"",
+      "complete": "Complete",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "delete": "Delete",
+      "due": "Set target date"
+    },
+    "countdown": {
+      "overdue": "{{count}} days overdue",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "upcoming": "In {{count}} days"
+    },
+    "recurrence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "unitDay": "days",
+      "unitWeek": "weeks",
+      "unitMonth": "months",
+      "unitYear": "years",
+      "everyInterval": "Every {{interval}} {{unit}}"
+    }
   }
 }

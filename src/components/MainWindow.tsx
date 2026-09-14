@@ -83,7 +83,12 @@ import {
   getNoteContextMenuItems,
   type NoteContextMenuAction,
 } from "../features/notes/noteContextMenu";
-import { openNotepadWindow, takeStartupFile, toggleTileWindow } from "../features/windows/api";
+import {
+  openNotepadWindow,
+  openTodoBoardWindow,
+  takeStartupFile,
+  toggleTileWindow,
+} from "../features/windows/api";
 import {
   closeCurrentWindow,
   minimizeCurrentWindow,
@@ -1677,6 +1682,14 @@ export function MainWindow({
     }
   };
 
+  const handleOpenTodoBoard = async () => {
+    try {
+      await openTodoBoardWindow();
+    } catch (error) {
+      showToast(getErrorMessage(error));
+    }
+  };
+
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -1995,6 +2008,28 @@ export function MainWindow({
             </span>
           </div>
           <div className="flex items-center">
+            <button
+              onClick={() => void handleOpenTodoBoard()}
+              className="w-10 h-11 flex items-center justify-center text-ink-ghost hover:text-bamboo hover:bg-bamboo-mist/50 transition-all cursor-pointer"
+              title={t("main.window.todoBoard", { defaultValue: "待办清单" })}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 5h12" />
+                <path d="M7 6.5v13" />
+                <path d="M5 19h6" />
+                <path d="M14 9h7l-2 5h-3.5" />
+                <path d="M14 9V5" />
+              </svg>
+            </button>
             <button
               onClick={() => void handleOpenNotepad()}
               className="w-10 h-11 flex items-center justify-center text-ink-ghost hover:text-bamboo hover:bg-bamboo-mist/50 transition-all cursor-pointer"

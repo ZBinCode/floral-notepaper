@@ -54,7 +54,17 @@
     "unsupportedFile": "僅支援匯入 .md 檔案",
     "unsupportedImageFormat": "不支援的圖片格式",
     "unsupportedShortcut": "{{field}} 配置無效",
-    "unsupportedShortcutGeneric": "快捷鍵配置無效"
+    "unsupportedShortcutGeneric": "快捷鍵配置無效",
+    "todoListNameEmpty": "清單名不能為空",
+    "todoListNameExists": "清單「{{name}}」已存在",
+    "todoListNotFound": "找不到該清單",
+    "todoTagNameEmpty": "標籤名不能為空",
+    "todoTagNameExists": "標籤「{{name}}」已存在",
+    "todoTagNotFound": "找不到該標籤",
+    "todoItemNotFound": "找不到該待辦",
+    "todoArchiveEntryNotFound": "找不到該歸檔條目",
+    "todoTitleEmpty": "待辦標題不能為空",
+    "todoRecurrenceInvalid": "重複規則無效"
   },
   "markdown": {
     "copied": "已複製",
@@ -157,7 +167,8 @@
       "about": "關於",
       "quickNotepad": "快捷便箋",
       "restore": "還原視窗",
-      "settings": "設定"
+      "settings": "設定",
+      "todoBoard": "待辦清單"
     }
   },
   "noteMenu": {
@@ -422,5 +433,49 @@
   },
   "tile": {
     "empty": "空"
+  },
+  "todo": {
+    "title": "待辦",
+    "loading": "載入中…",
+    "retry": "重試",
+    "window": {
+      "pin": "視窗置頂",
+      "close": "關閉"
+    },
+    "empty": {
+      "title": "還沒有清單",
+      "hint": "建立第一個清單，開始整理待辦"
+    },
+    "list": {
+      "namePlaceholder": "清單名稱",
+      "create": "建立"
+    },
+    "item": {
+      "addPlaceholder": "新增待辦…",
+      "empty": "這個清單還沒有待辦",
+      "completed": "已完成「{{title}}」",
+      "complete": "完成",
+      "pin": "置頂",
+      "unpin": "取消置頂",
+      "delete": "刪除",
+      "due": "設定目標日"
+    },
+    "countdown": {
+      "overdue": "已過期 {{count}} 天",
+      "today": "今天",
+      "tomorrow": "明天",
+      "upcoming": "還有 {{count}} 天"
+    },
+    "recurrence": {
+      "daily": "每天",
+      "weekly": "每週",
+      "monthly": "每月",
+      "yearly": "每年",
+      "unitDay": "天",
+      "unitWeek": "週",
+      "unitMonth": "月",
+      "unitYear": "年",
+      "everyInterval": "每 {{interval}} {{unit}}"
+    }
   }
 }

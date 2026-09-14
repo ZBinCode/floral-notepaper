@@ -515,6 +515,14 @@ async fn toggle_tile_window(
 }
 
 #[tauri::command]
+async fn open_todo_window(
+    app: AppHandle,
+    bounds: Option<desktop::WindowBounds>,
+) -> Result<String, AppError> {
+    desktop::open_todo_window(app, bounds).await
+}
+
+#[tauri::command]
 async fn open_note_in_editor(app: AppHandle, note_id: String) -> Result<(), AppError> {
     desktop::show_main_window(&app)?;
     let _ = app.emit("open-note", &note_id);
@@ -675,6 +683,7 @@ pub fn run() {
             start_window_drag_with_offset,
             open_tile_window,
             toggle_tile_window,
+            open_todo_window,
             open_note_in_editor,
             updater::commands::update_status,
             updater::commands::update_settings_get,
