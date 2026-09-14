@@ -322,7 +322,14 @@ fn data_dir_from_notes_dir(notes_dir: &str) -> PathBuf {
     path.to_path_buf()
 }
 
-const DATA_DIR_ITEMS: [&str; 4] = ["metadata.json", "notes", "images", "backgrounds"];
+const DATA_DIR_ITEMS: [&str; 6] = [
+    "metadata.json",
+    "notes",
+    "images",
+    "backgrounds",
+    "todos.json",
+    "todo-archive.json",
+];
 
 // 旧版无论 notesDir 指向哪里，metadata.json、images、backgrounds 都固定存放在旧主目录；
 // 数据目录解析到其他位置时必须一并带走，否则笔记内图片引用全部失效、created_at 丢失

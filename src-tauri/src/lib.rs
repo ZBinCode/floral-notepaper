@@ -4,8 +4,13 @@ pub mod locales;
 pub mod services;
 pub mod updater;
 
+use chrono::NaiveDate;
 use locales::Locale;
 use services::notes::{default_store, AppConfig, AppError, Note, NoteMetadata, SaveNoteRequest};
+use services::todos::{
+    self as todos_service, CreateTodoListRequest, CreateTodoTagRequest, SaveTodoItemRequest,
+    TodoArchiveEntry, TodoCompleteResult, TodoItem, TodoList, TodoTag, UpdateTodoTagRequest,
+};
 use std::{env, fs, io::Write, path::PathBuf};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -141,6 +146,157 @@ fn notes_move_category(
     let result = default_store()?.move_note_to_category(&id, &category)?;
     let _ = app.emit("notes-changed", ());
     Ok(result)
+}
+
+// ----- 待办事项 -----
+
+#[tauri::command]
+fn todo_lists_list() -> Result<Vec<TodoList>, AppError> {
+    todos_service::default_store()?.list_lists()
+}
+
+#[tauri::command]
+fn todo_lists_create(app: AppHandle, request: CreateTodoListRequest) -> Result<TodoList, AppError> {
+    let list = todos_service::default_store()?.create_list(request, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(list)
+}
+
+#[tauri::command]
+fn todo_lists_rename(app: AppHandle, id: String, name: String) -> Result<TodoList, AppError> {
+    let list = todos_service::default_store()?.rename_list(&id, &name, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(list)
+}
+
+#[tauri::command]
+fn todo_lists_delete(app: AppHandle, id: String) -> Result<(), AppError> {
+    todos_service::default_store()?.delete_list(&id)?;
+    let _ = app.emit("todos-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+fn todo_lists_reorder(app: AppHandle, ordered_ids: Vec<String>) -> Result<Vec<TodoList>, AppError> {
+    let lists = todos_service::default_store()?.reorder_lists(&ordered_ids, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(lists)
+}
+
+#[tauri::command]
+fn todo_tags_list() -> Result<Vec<TodoTag>, AppError> {
+    todos_service::default_store()?.list_tags()
+}
+
+#[tauri::command]
+fn todo_tags_create(app: AppHandle, request: CreateTodoTagRequest) -> Result<TodoTag, AppError> {
+    let tag = todos_service::default_store()?.create_tag(request, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(tag)
+}
+
+#[tauri::command]
+fn todo_tags_update(
+    app: AppHandle,
+    id: String,
+    request: UpdateTodoTagRequest,
+) -> Result<TodoTag, AppError> {
+    let tag = todos_service::default_store()?.update_tag(&id, request, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(tag)
+}
+
+#[tauri::command]
+fn todo_tags_delete(app: AppHandle, id: String) -> Result<(), AppError> {
+    todos_service::default_store()?.delete_tag(&id)?;
+    let _ = app.emit("todos-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+fn todo_items_list(list_id: Option<String>) -> Result<Vec<TodoItem>, AppError> {
+    todos_service::default_store()?.list_items(list_id.as_deref())
+}
+
+#[tauri::command]
+fn todo_items_create(app: AppHandle, request: SaveTodoItemRequest) -> Result<TodoItem, AppError> {
+    let item = todos_service::default_store()?.create_item(request, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(item)
+}
+
+#[tauri::command]
+fn todo_items_update(
+    app: AppHandle,
+    id: String,
+    request: SaveTodoItemRequest,
+) -> Result<TodoItem, AppError> {
+    let item = todos_service::default_store()?.update_item(&id, request, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(item)
+}
+
+#[tauri::command]
+fn todo_items_delete(app: AppHandle, id: String) -> Result<(), AppError> {
+    todos_service::default_store()?.delete_item(&id)?;
+    let _ = app.emit("todos-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+fn todo_items_reorder(
+    app: AppHandle,
+    list_id: String,
+    ordered_ids: Vec<String>,
+) -> Result<Vec<TodoItem>, AppError> {
+    let items = todos_service::default_store()?.reorder_items(
+        &list_id,
+        &ordered_ids,
+        chrono::Utc::now(),
+    )?;
+    let _ = app.emit("todos-changed", ());
+    Ok(items)
+}
+
+#[tauri::command]
+fn todo_items_set_pinned(app: AppHandle, id: String, pinned: bool) -> Result<TodoItem, AppError> {
+    let item = todos_service::default_store()?.set_item_pinned(&id, pinned, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(item)
+}
+
+#[tauri::command]
+fn todo_items_complete(app: AppHandle, id: String) -> Result<TodoCompleteResult, AppError> {
+    let result = todos_service::default_store()?.complete_item(&id, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(result)
+}
+
+#[tauri::command]
+fn todo_items_restore(app: AppHandle, entry_id: String) -> Result<TodoItem, AppError> {
+    let item =
+        todos_service::default_store()?.restore_archive_entry(&entry_id, chrono::Utc::now())?;
+    let _ = app.emit("todos-changed", ());
+    Ok(item)
+}
+
+#[tauri::command]
+fn todo_archive_query(
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+) -> Result<Vec<TodoArchiveEntry>, AppError> {
+    todos_service::default_store()?.query_archive(from, to)
+}
+
+/// 手动触发一次重复待办的到期推进（启动补跑入口；定时调度后续接入）
+#[tauri::command]
+fn todo_spawn_due(app: AppHandle) -> Result<Vec<TodoItem>, AppError> {
+    let now = chrono::Utc::now();
+    let spawned = todos_service::default_store()?.spawn_due(now.date_naive(), now)?;
+    if !spawned.is_empty() {
+        let _ = app.emit("todos-changed", ());
+    }
+    Ok(spawned)
 }
 
 #[tauri::command]
@@ -477,6 +633,25 @@ pub fn run() {
             notes_import_markdown,
             notes_export_markdown,
             notes_move_category,
+            todo_lists_list,
+            todo_lists_create,
+            todo_lists_rename,
+            todo_lists_delete,
+            todo_lists_reorder,
+            todo_tags_list,
+            todo_tags_create,
+            todo_tags_update,
+            todo_tags_delete,
+            todo_items_list,
+            todo_items_create,
+            todo_items_update,
+            todo_items_delete,
+            todo_items_reorder,
+            todo_items_set_pinned,
+            todo_items_complete,
+            todo_items_restore,
+            todo_archive_query,
+            todo_spawn_due,
             read_external_file,
             save_external_file,
             get_file_modified_time,
