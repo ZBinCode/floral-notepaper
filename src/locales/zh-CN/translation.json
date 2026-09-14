@@ -504,7 +504,17 @@
       "unitWeek": "周",
       "unitMonth": "月",
       "unitYear": "年",
-      "everyInterval": "每 {{interval}} {{unit}}"
+      "everyInterval": "每 {{interval}} {{unit}}",
+      "editor": "重复规则",
+      "none": "不重复",
+      "endDate": "结束日期",
+      "everyPrefix": "每",
+      "unitFor": {
+        "daily": "天",
+        "weekly": "周",
+        "monthly": "月",
+        "yearly": "年"
+      }
     },
     "tags": {
       "manage": "管理标签",
@@ -514,6 +524,17 @@
       "empty": "还没有标签",
       "delete": "删除标签",
       "deleteConfirm": "确认？"
+    },
+    "view": {
+      "board": "待办",
+      "review": "回顾"
+    },
+    "review": {
+      "empty": "本周还没有完成的待办",
+      "summary": "本周完成 {{count}} 项",
+      "weekday": "周{{weekday}}",
+      "restore": "撤销完成",
+      "restored": "已恢复「{{title}}」"
     }
   }
 }

@@ -485,7 +485,17 @@
       "unitWeek": "週",
       "unitMonth": "月",
       "unitYear": "年",
-      "everyInterval": "每 {{interval}} {{unit}}"
+      "everyInterval": "每 {{interval}} {{unit}}",
+      "editor": "重複規則",
+      "none": "不重複",
+      "endDate": "結束日期",
+      "everyPrefix": "每",
+      "unitFor": {
+        "daily": "天",
+        "weekly": "週",
+        "monthly": "月",
+        "yearly": "年"
+      }
     },
     "tags": {
       "manage": "管理標籤",
@@ -495,6 +505,17 @@
       "empty": "還沒有標籤",
       "delete": "刪除標籤",
       "deleteConfirm": "確認？"
+    },
+    "view": {
+      "board": "待辦",
+      "review": "回顧"
+    },
+    "review": {
+      "empty": "本週還沒有完成的待辦",
+      "summary": "本週完成 {{count}} 項",
+      "weekday": "週{{weekday}}",
+      "restore": "撤銷完成",
+      "restored": "已恢復「{{title}}」"
     }
   }
 }

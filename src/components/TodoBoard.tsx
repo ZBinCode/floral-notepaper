@@ -23,29 +23,46 @@ import {
   listTodoItems,
   listTodoLists,
   listTodoTags,
+  queryTodoArchive,
   renameTodoList,
   reorderTodoItems,
+  restoreTodoItem,
   setTodoItemPinned,
   setTodoListDefaultTags,
   spawnTodoDue,
   updateTodoItem,
   updateTodoTag,
 } from "../features/todos/api";
-import type { TodoItem, TodoList, TodoTag } from "../features/todos/types";
+import type {
+  TodoArchiveEntry,
+  TodoItem,
+  TodoList,
+  TodoRecurrenceFreq,
+  TodoTag,
+} from "../features/todos/types";
 import {
   TODO_TAG_PALETTE,
+  buildRecurrenceRule,
   buildReminderAt,
   filterTodoItemsByTag,
+  groupArchiveByDay,
   groupTodoItems,
+  parseTodoDate,
   reminderTimeValue,
   reorderIdsAfterDrop,
   saveRequestFromItem,
+  toISODate,
   todoCountdown,
   todoCountdownLabel,
+  todoDayLabel,
   todoRecurrenceLabel,
   todoTagColor,
+  todoTimeLabel,
+  todoWeekdayShort,
   toggleTagId,
+  weekRange,
 } from "../features/todos/todoUtils";
+import { SlidingButtonGroup } from "./SlidingButtonGroup";
 import {
   closeCurrentWindow,
   setCurrentWindowAlwaysOnTop,
@@ -73,6 +90,9 @@ export function TodoBoard() {
   const [tagEditingId, setTagEditingId] = useState<string | null>(null);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  const [boardMode, setBoardMode] = useState<"board" | "review">("board");
+  const [archiveEntries, setArchiveEntries] = useState<TodoArchiveEntry[]>([]);
+  const [recurrenceEditingId, setRecurrenceEditingId] = useState<string | null>(null);
   const [dragItemId, setDragItemId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const epochRef = useRef(0);
@@ -99,18 +119,32 @@ export function TodoBoard() {
       });
   }, []);
 
+  const refreshArchive = useCallback(() => {
+    const range = weekRange();
+    queryTodoArchive(range.from, range.to)
+      .then((entries) => setArchiveEntries(entries))
+      .catch(() => setArchiveEntries([]));
+  }, []);
+
   useEffect(() => {
     // 启动补跑：应用关闭期间错过的重复待办在此推进
     spawnTodoDue().catch(() => undefined);
     refresh();
-    const unlisten = listen("todos-changed", () => refresh());
-    const onFocus = () => refresh();
+    refreshArchive();
+    const unlisten = listen("todos-changed", () => {
+      refresh();
+      refreshArchive();
+    });
+    const onFocus = () => {
+      refresh();
+      refreshArchive();
+    };
     window.addEventListener("focus", onFocus);
     return () => {
       void unlisten.then((fn) => fn());
       window.removeEventListener("focus", onFocus);
     };
-  }, [refresh]);
+  }, [refresh, refreshArchive]);
 
   const visibleItems = useMemo(
     () => filterTodoItemsByTag(items, selectedTagId),
@@ -215,6 +249,47 @@ export function TodoBoard() {
     }
   };
 
+  const handleSetRecurrence = async (
+    item: TodoItem,
+    freq: TodoRecurrenceFreq | "none",
+    interval: number,
+    weekdays: number[],
+    endDate: string | null,
+  ) => {
+    const rule = buildRecurrenceRule({
+      freq,
+      interval,
+      weekdays,
+      anchorDate: item.dueDate ?? toISODate(new Date()),
+      endDate,
+    });
+    if (
+      JSON.stringify(rule) ===
+      JSON.stringify(
+        item.recurrence ? { ...item.recurrence, endDate: item.recurrence.endDate ?? null } : null,
+      )
+    ) {
+      return;
+    }
+    try {
+      await updateTodoItem(item.id, saveRequestFromItem(item, { recurrence: rule }));
+    } catch (error) {
+      showToast(getTodoErrorMessage(error), "error");
+    }
+  };
+
+  const handleRestore = async (entry: TodoArchiveEntry) => {
+    try {
+      await restoreTodoItem(entry.id);
+      showToast(
+        t("todo.review.restored", { defaultValue: "已恢复「{{title}}」", title: entry.title }),
+        "info",
+      );
+    } catch (error) {
+      showToast(getTodoErrorMessage(error), "error");
+    }
+  };
+
   const handleSetItemTags = async (item: TodoItem, tagIds: string[]) => {
     try {
       await updateTodoItem(item.id, saveRequestFromItem(item, { tagIds }));
@@ -265,9 +340,15 @@ export function TodoBoard() {
           className="flex items-center justify-between h-10 pl-3 pr-1.5 shrink-0 border-b border-paper-deep/30 bg-paper/55 select-none cursor-default"
           onMouseDown={handleHeaderMouseDown}
         >
-          <span className="text-[13px] font-serif font-medium text-ink-soft tracking-wide">
-            {t("todo.title", { defaultValue: "待办" })}
-          </span>
+          <SlidingButtonGroup
+            options={[
+              { value: "board", label: t("todo.view.board", { defaultValue: "待办" }) },
+              { value: "review", label: t("todo.view.review", { defaultValue: "回顾" }) },
+            ]}
+            value={boardMode}
+            onChange={setBoardMode}
+            buttonClassName="h-6 px-3"
+          />
           <div className="flex items-center">
             <button
               type="button"
@@ -334,7 +415,7 @@ export function TodoBoard() {
           </div>
         </div>
 
-        {tags.length > 0 && (
+        {boardMode === "board" && tags.length > 0 && (
           <div className="flex items-center gap-1 px-2.5 py-1.5 shrink-0 border-b border-paper-deep/20 overflow-x-auto scrollbar-hidden">
             <TagFilterChip
               label={t("todo.tags.filterAll", { defaultValue: "全部" })}
@@ -355,7 +436,12 @@ export function TodoBoard() {
         )}
 
         <div className="relative flex-1 min-h-0 overflow-y-auto px-2 py-2">
-          {loading ? (
+          {boardMode === "review" ? (
+            <TodoReviewView
+              entries={archiveEntries}
+              onRestore={(entry) => void handleRestore(entry)}
+            />
+          ) : loading ? (
             <div className="h-full flex items-center justify-center text-[12px] text-ink-faint">
               {t("todo.loading", { defaultValue: "加载中…" })}
             </div>
@@ -435,6 +521,11 @@ export function TodoBoard() {
                   }
                   onSetItemTags={(item, tagIds) => void handleSetItemTags(item, tagIds)}
                   onCreateTagAndAssign={(item, name) => void handleCreateTagAndAssign(item, name)}
+                  onSetRecurrence={(item, freq, interval, weekdays, endDate) =>
+                    void handleSetRecurrence(item, freq, interval, weekdays, endDate)
+                  }
+                  recurrenceEditingId={recurrenceEditingId}
+                  onRecurrenceEditingChange={setRecurrenceEditingId}
                   onRenameList={async (id, name) => {
                     try {
                       await renameTodoList(id, name);
@@ -591,6 +682,15 @@ interface TodoListSectionProps {
   onDueChange: (item: TodoItem, dueDate: string, time: string) => void;
   onSetItemTags: (item: TodoItem, tagIds: string[]) => void;
   onCreateTagAndAssign: (item: TodoItem, name: string) => void;
+  onSetRecurrence: (
+    item: TodoItem,
+    freq: TodoRecurrenceFreq | "none",
+    interval: number,
+    weekdays: number[],
+    endDate: string | null,
+  ) => void;
+  recurrenceEditingId: string | null;
+  onRecurrenceEditingChange: (id: string | null) => void;
   onRenameList: (id: string, name: string) => Promise<void>;
   onSetDefaultTags: (id: string, tagIds: string[]) => Promise<void>;
   onDeleteList: (id: string) => Promise<void>;
@@ -829,6 +929,9 @@ function TodoListSection(props: TodoListSectionProps) {
                 onDueChange={props.onDueChange}
                 onSetItemTags={props.onSetItemTags}
                 onCreateTagAndAssign={props.onCreateTagAndAssign}
+                onSetRecurrence={props.onSetRecurrence}
+                recurrenceEditingId={props.recurrenceEditingId}
+                onRecurrenceEditingChange={props.onRecurrenceEditingChange}
                 dueEditingId={props.dueEditingId}
                 onDueEditingChange={props.onDueEditingChange}
                 tagEditingId={props.tagEditingId}
@@ -836,7 +939,8 @@ function TodoListSection(props: TodoListSectionProps) {
                 draggable={
                   props.editing?.id !== item.id &&
                   props.dueEditingId !== item.id &&
-                  props.tagEditingId !== item.id
+                  props.tagEditingId !== item.id &&
+                  props.recurrenceEditingId !== item.id
                 }
                 onDragStart={(event) => {
                   props.onDragItemChange(item.id);
@@ -889,6 +993,15 @@ interface TodoItemRowProps {
   onDueChange: (item: TodoItem, dueDate: string, time: string) => void;
   onSetItemTags: (item: TodoItem, tagIds: string[]) => void;
   onCreateTagAndAssign: (item: TodoItem, name: string) => void;
+  onSetRecurrence: (
+    item: TodoItem,
+    freq: TodoRecurrenceFreq | "none",
+    interval: number,
+    weekdays: number[],
+    endDate: string | null,
+  ) => void;
+  recurrenceEditingId: string | null;
+  onRecurrenceEditingChange: (id: string | null) => void;
   dueEditingId: string | null;
   onDueEditingChange: (id: string | null) => void;
   tagEditingId: string | null;
@@ -908,6 +1021,7 @@ function TodoItemRow(props: TodoItemRowProps) {
   const isEditing = props.editing?.id === item.id;
   const isDueEditing = props.dueEditingId === item.id;
   const isTagEditing = props.tagEditingId === item.id;
+  const isRecurrenceEditing = props.recurrenceEditingId === item.id;
 
   const countdownClassName =
     countdown?.kind === "overdue"
@@ -1060,6 +1174,15 @@ function TodoItemRow(props: TodoItemRowProps) {
             </button>
           </div>
         )}
+        {isRecurrenceEditing && (
+          <TodoRecurrenceEditor
+            item={item}
+            onChange={(freq, interval, weekdays, endDate) =>
+              props.onSetRecurrence(item, freq, interval, weekdays, endDate)
+            }
+            onClose={() => props.onRecurrenceEditingChange(null)}
+          />
+        )}
         {isTagEditing && (
           <div className="flex flex-col gap-1.5 p-1.5 rounded-md bg-paper/80 border border-paper-deep/40">
             {props.tags.length === 0 ? (
@@ -1140,6 +1263,24 @@ function TodoItemRow(props: TodoItemRowProps) {
           >
             <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
             <circle cx="7.5" cy="7.5" r="0.5" fill="currentColor" />
+          </svg>
+        </RowIconButton>
+        <RowIconButton
+          title={t("todo.recurrence.editor", { defaultValue: "重复规则" })}
+          onClick={() => props.onRecurrenceEditingChange(isRecurrenceEditing ? null : item.id)}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <path d="M21 3v6h-6" />
           </svg>
         </RowIconButton>
         <RowIconButton
@@ -1478,5 +1619,289 @@ function RowIconButton({
     >
       {children}
     </button>
+  );
+}
+
+function TodoReviewView({
+  entries,
+  onRestore,
+}: {
+  entries: TodoArchiveEntry[];
+  onRestore: (entry: TodoArchiveEntry) => void;
+}) {
+  const { t } = useTranslation();
+  const groups = useMemo(() => groupArchiveByDay(entries), [entries]);
+
+  if (entries.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-ink-ghost"
+        >
+          <path d="M3 12a9 9 0 1 0 9-9" />
+          <path d="M3 4v8h8" />
+          <path d="M9 13l2.5 2.5L17 10" />
+        </svg>
+        <div className="text-[12px] text-ink-faint">
+          {t("todo.review.empty", { defaultValue: "本周还没有完成的待办" })}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="px-1 text-[11px] text-ink-faint">
+        {t("todo.review.summary", {
+          defaultValue: "本周完成 {{count}} 项",
+          count: entries.length,
+        })}
+      </div>
+      {groups.map((group) => {
+        const weekday = parseTodoDate(group.date)?.getDay();
+        const weekdayIndex = weekday === undefined ? null : (weekday + 6) % 7;
+        return (
+          <section
+            key={group.date}
+            className="rounded-xl bg-paper/40 border border-paper-deep/30 overflow-hidden"
+          >
+            <header className="flex items-center justify-between px-2.5 pt-2 pb-1">
+              <span className="text-[12px] font-medium text-ink-soft">
+                {todoDayLabel(group.date)}
+                {weekdayIndex !== null && (
+                  <span className="ml-1 text-[10px] text-ink-ghost">
+                    {t("todo.review.weekday", {
+                      defaultValue: "周{{weekday}}",
+                      weekday: todoWeekdayShort(weekdayIndex),
+                    })}
+                  </span>
+                )}
+              </span>
+              <span className="text-[10px] text-ink-ghost">{group.entries.length}</span>
+            </header>
+            <ul className="flex flex-col px-1 pb-1">
+              {group.entries.map((entry) => (
+                <li
+                  key={`${entry.id}-${entry.completedAt}`}
+                  className="group flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-paper/70"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-bamboo shrink-0"
+                  >
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  <span className="flex-1 min-w-0 text-[12px] text-ink leading-snug break-all line-through decoration-ink-ghost/50">
+                    {entry.title}
+                  </span>
+                  {entry.listName && (
+                    <span className="text-[10px] text-ink-ghost shrink-0 max-w-[72px] truncate">
+                      {entry.listName}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-ink-ghost shrink-0">
+                    {todoTimeLabel(entry.completedAt)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onRestore(entry)}
+                    className="w-5 h-5 flex items-center justify-center rounded text-ink-ghost opacity-0 group-hover:opacity-100 hover:text-bamboo hover:bg-bamboo-mist/60 transition-all cursor-pointer shrink-0"
+                    title={t("todo.review.restore", { defaultValue: "撤销完成" })}
+                  >
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 7v6h6" />
+                      <path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+                    </svg>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+const RECURRENCE_FREQ_OPTIONS: Array<{
+  value: TodoRecurrenceFreq | "none";
+  labelKey: string;
+  fallback: string;
+}> = [
+  { value: "none", labelKey: "todo.recurrence.none", fallback: "不重复" },
+  { value: "daily", labelKey: "todo.recurrence.daily", fallback: "每天" },
+  { value: "weekly", labelKey: "todo.recurrence.weekly", fallback: "每周" },
+  { value: "monthly", labelKey: "todo.recurrence.monthly", fallback: "每月" },
+  { value: "yearly", labelKey: "todo.recurrence.yearly", fallback: "每年" },
+];
+
+function TodoRecurrenceEditor({
+  item,
+  onChange,
+  onClose,
+}: {
+  item: TodoItem;
+  onChange: (
+    freq: TodoRecurrenceFreq | "none",
+    interval: number,
+    weekdays: number[],
+    endDate: string | null,
+  ) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const rule = item.recurrence;
+  const [interval, setIntervalValue] = useState(
+    rule?.interval && rule.interval > 1 ? rule.interval : 1,
+  );
+  const [weekdays, setWeekdays] = useState<number[]>(rule?.byWeekdays ?? []);
+  const [endDate, setEndDate] = useState(rule?.endDate ?? "");
+  const freq: TodoRecurrenceFreq | "none" = rule?.freq ?? "none";
+
+  const emit = (
+    nextFreq: TodoRecurrenceFreq | "none",
+    nextInterval: number,
+    nextWeekdays: number[],
+    nextEndDate: string,
+  ) => {
+    onChange(nextFreq, nextInterval, nextWeekdays, nextEndDate || null);
+  };
+
+  const toggleWeekday = (day: number) => {
+    const next = weekdays.includes(day)
+      ? weekdays.filter((value) => value !== day)
+      : [...weekdays, day].sort((a, b) => a - b);
+    setWeekdays(next);
+    emit(freq, interval, next, endDate);
+  };
+
+  return (
+    <div
+      className="flex flex-col gap-2 p-2 rounded-md bg-paper/80 border border-paper-deep/40"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <div className="flex items-center gap-1 flex-wrap">
+        {RECURRENCE_FREQ_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => emit(option.value, interval, weekdays, endDate)}
+            className={`h-6 px-2 rounded-md border text-[11px] transition-colors cursor-pointer ${
+              freq === option.value
+                ? "border-bamboo/70 bg-bamboo-mist/60 text-ink"
+                : "border-paper-deep/40 text-ink-faint hover:text-ink"
+            }`}
+          >
+            {t(option.labelKey, { defaultValue: option.fallback })}
+          </button>
+        ))}
+      </div>
+
+      {freq !== "none" && (
+        <>
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-faint">
+            <span>{t("todo.recurrence.everyPrefix", { defaultValue: "每" })}</span>
+            <input
+              type="number"
+              min={1}
+              max={99}
+              value={interval}
+              onChange={(event) => {
+                const next = Math.max(1, Math.min(99, Math.floor(Number(event.target.value) || 1)));
+                setIntervalValue(next);
+                emit(freq, next, weekdays, endDate);
+              }}
+              className="w-[52px] h-6 px-1 rounded-md bg-paper border border-paper-deep/40 text-[11px] text-ink focus:outline-none focus:border-bamboo/60"
+            />
+            <span>
+              {t(`todo.recurrence.unitFor.${freq}`, {
+                defaultValue:
+                  freq === "daily"
+                    ? "天"
+                    : freq === "weekly"
+                      ? "周"
+                      : freq === "monthly"
+                        ? "月"
+                        : "年",
+              })}
+            </span>
+          </div>
+
+          {freq === "weekly" && (
+            <div className="flex items-center gap-1">
+              {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                const active = weekdays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleWeekday(day)}
+                    className={`w-6 h-6 rounded-md border text-[11px] transition-colors cursor-pointer ${
+                      active
+                        ? "border-bamboo/70 bg-bamboo-mist/60 text-ink"
+                        : "border-paper-deep/40 text-ink-faint hover:text-ink"
+                    }`}
+                  >
+                    {todoWeekdayShort(day)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-faint">
+            <span>{t("todo.recurrence.endDate", { defaultValue: "结束日期" })}</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(event) => {
+                setEndDate(event.target.value);
+                emit(freq, interval, weekdays, event.target.value);
+              }}
+              className="h-6 px-1 rounded-md bg-paper border border-paper-deep/40 text-[11px] text-ink focus:outline-none focus:border-bamboo/60"
+            />
+          </div>
+        </>
+      )}
+
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-6 px-2 rounded-md text-[11px] text-ink-faint hover:text-ink cursor-pointer"
+        >
+          {t("common.back", { defaultValue: "返回" })}
+        </button>
+      </div>
+    </div>
   );
 }

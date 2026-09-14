@@ -504,7 +504,17 @@
       "unitWeek": "weeks",
       "unitMonth": "months",
       "unitYear": "years",
-      "everyInterval": "Every {{interval}} {{unit}}"
+      "everyInterval": "Every {{interval}} {{unit}}",
+      "editor": "Repeat",
+      "none": "Never",
+      "endDate": "End date",
+      "everyPrefix": "Every",
+      "unitFor": {
+        "daily": "days",
+        "weekly": "weeks",
+        "monthly": "months",
+        "yearly": "years"
+      }
     },
     "tags": {
       "manage": "Manage tags",
@@ -514,6 +524,17 @@
       "empty": "No tags yet",
       "delete": "Delete tag",
       "deleteConfirm": "Sure?"
+    },
+    "view": {
+      "board": "Todos",
+      "review": "Review"
+    },
+    "review": {
+      "empty": "Nothing completed this week yet",
+      "summary": "{{count}} completed this week",
+      "weekday": "{{weekday}}",
+      "restore": "Uncomplete",
+      "restored": "Restored \"{{title}}\""
     }
   }
 }

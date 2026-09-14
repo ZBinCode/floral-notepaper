@@ -1,5 +1,12 @@
 import type { TFunction } from "i18next";
-import type { TodoItem, TodoList, TodoRecurrenceRule, SaveTodoItemRequest, TodoTag } from "./types";
+import type {
+  TodoArchiveEntry,
+  TodoItem,
+  TodoList,
+  TodoRecurrenceRule,
+  SaveTodoItemRequest,
+  TodoTag,
+} from "./types";
 
 /** 标签调色板：低饱和的自然色系，与 bamboo 主题色协调 */
 export const TODO_TAG_PALETTE = [
@@ -221,4 +228,96 @@ export function todoRecurrenceLabel(rule: TodoRecurrenceRule, translate: TFuncti
     });
   }
   return translate(RECURRENCE_FREQ_LABEL_KEYS[rule.freq], { defaultValue: defaults.label });
+}
+
+// ---------------------------------------------------------------------------
+// 重复规则编辑与归档回顾
+// ---------------------------------------------------------------------------
+
+/** 由编辑器输入构造重复规则；freq 为 "none" 时返回 null（清除重复） */
+export function buildRecurrenceRule(input: {
+  freq: TodoRecurrenceRule["freq"] | "none";
+  interval: number;
+  weekdays: number[];
+  anchorDate: string;
+  endDate?: string | null;
+}): TodoRecurrenceRule | null {
+  if (input.freq === "none") return null;
+  const interval = Math.max(1, Math.floor(input.interval) || 1);
+  const weekdays =
+    input.freq === "weekly"
+      ? [...new Set(input.weekdays)].filter((day) => day >= 0 && day <= 6).sort((a, b) => a - b)
+      : [];
+  return {
+    freq: input.freq,
+    interval,
+    byWeekdays: weekdays,
+    anchorDate: input.anchorDate,
+    endDate: input.endDate || null,
+  };
+}
+
+export function toISODate(date: Date): string {
+  const year = String(date.getFullYear()).padStart(4, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** 本周（周一到周日）的 ISO 日期范围 */
+export function weekRange(today: Date = new Date()): { from: string; to: string } {
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - ((today.getDay() + 6) % 7),
+  );
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  return { from: toISODate(start), to: toISODate(end) };
+}
+
+export interface ArchiveDayGroup {
+  date: string;
+  entries: TodoArchiveEntry[];
+}
+
+/** 归档条目按完成日（本地时区）分组，日期倒序、组内按完成时刻倒序 */
+export function groupArchiveByDay(entries: TodoArchiveEntry[]): ArchiveDayGroup[] {
+  const buckets = new Map<string, TodoArchiveEntry[]>();
+  for (const entry of entries) {
+    const completed = new Date(entry.completedAt);
+    if (Number.isNaN(completed.getTime())) continue;
+    const key = toISODate(completed);
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.push(entry);
+    } else {
+      buckets.set(key, [entry]);
+    }
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, dayEntries]) => ({
+      date,
+      entries: [...dayEntries].sort((a, b) => b.completedAt.localeCompare(a.completedAt)),
+    }));
+}
+
+/** "2026-09-14" → "9月14日" */
+export function todoDayLabel(isoDate: string): string {
+  const date = parseTodoDate(isoDate);
+  if (!date) return isoDate;
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
+
+export function todoWeekdayShort(index: number): string {
+  return WEEKDAY_LABELS[index] ?? "";
+}
+
+/** 本地 HH:mm，用于归档条目的完成时刻展示 */
+export function todoTimeLabel(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }

@@ -1,20 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { getFixedT } from "i18next";
 import { i18n } from "../../locales";
-import type { TodoItem, TodoList } from "./types";
+import type { TodoArchiveEntry, TodoItem, TodoList } from "./types";
 import {
   TODO_TAG_PALETTE,
   arrayMove,
+  buildRecurrenceRule,
   buildReminderAt,
   filterTodoItemsByTag,
+  groupArchiveByDay,
   groupTodoItems,
   hashString,
   parseTodoDate,
   reminderTimeValue,
   reorderIdsAfterDrop,
+  weekRange,
   sortTodoItems,
   todoCountdown,
   todoCountdownLabel,
+  todoDayLabel,
+  todoWeekdayShort,
   todoRecurrenceLabel,
   todoTagColor,
   toggleTagId,
@@ -227,5 +232,94 @@ describe("todoRecurrenceLabel", () => {
         translate,
       ),
     ).toBe("每 3 周");
+  });
+});
+
+describe("buildRecurrenceRule", () => {
+  it("builds a normalized rule from editor input", () => {
+    const rule = buildRecurrenceRule({
+      freq: "weekly",
+      interval: 0,
+      weekdays: [4, 1, 1, 9],
+      anchorDate: "2026-09-14",
+      endDate: "2026-12-31",
+    });
+    expect(rule).toEqual({
+      freq: "weekly",
+      interval: 1,
+      byWeekdays: [1, 4],
+      anchorDate: "2026-09-14",
+      endDate: "2026-12-31",
+    });
+  });
+
+  it("clears weekdays for non-weekly frequencies and null for none", () => {
+    const daily = buildRecurrenceRule({
+      freq: "daily",
+      interval: 3,
+      weekdays: [1],
+      anchorDate: "2026-09-14",
+    });
+    expect(daily).toEqual({
+      freq: "daily",
+      interval: 3,
+      byWeekdays: [],
+      anchorDate: "2026-09-14",
+      endDate: null,
+    });
+    expect(
+      buildRecurrenceRule({ freq: "none", interval: 1, weekdays: [], anchorDate: "2026-09-14" }),
+    ).toBeNull();
+  });
+});
+
+describe("weekRange and date helpers", () => {
+  it("returns Monday..Sunday for the current week", () => {
+    // 2026-09-16 是周三
+    expect(weekRange(new Date(2026, 8, 16))).toEqual({ from: "2026-09-14", to: "2026-09-20" });
+    // 周一本日
+    expect(weekRange(new Date(2026, 8, 14))).toEqual({ from: "2026-09-14", to: "2026-09-20" });
+    // 周日仍属于同一周
+    expect(weekRange(new Date(2026, 8, 20))).toEqual({ from: "2026-09-14", to: "2026-09-20" });
+    // 跨月：2026-08-31 周一
+    expect(weekRange(new Date(2026, 7, 31))).toEqual({ from: "2026-08-31", to: "2026-09-06" });
+  });
+
+  it("formats day labels and weekday shorts", () => {
+    expect(todoDayLabel("2026-09-14")).toBe("9月14日");
+    expect(todoDayLabel("bad")).toBe("bad");
+    expect(todoWeekdayShort(0)).toBe("一");
+    expect(todoWeekdayShort(6)).toBe("日");
+  });
+});
+
+describe("groupArchiveByDay", () => {
+  function entry(id: string, completedAt: string): TodoArchiveEntry {
+    return {
+      id,
+      listId: "list-1",
+      listName: "清单",
+      title: id,
+      pinned: false,
+      tagIds: [],
+      dueDate: null,
+      remindAt: null,
+      completedAt,
+      createdAt: completedAt,
+    };
+  }
+
+  it("groups entries by local completion date in descending order", () => {
+    const groups = groupArchiveByDay([
+      entry("a", new Date(2026, 8, 14, 10, 0).toISOString()),
+      entry("b", new Date(2026, 8, 13, 18, 0).toISOString()),
+      entry("c", new Date(2026, 8, 14, 9, 0).toISOString()),
+    ]);
+    expect(groups.map((group) => group.date)).toEqual(["2026-09-14", "2026-09-13"]);
+    expect(groups[0].entries.map((item) => item.id)).toEqual(["a", "c"]);
+  });
+
+  it("skips entries with invalid timestamps", () => {
+    expect(groupArchiveByDay([entry("a", "oops")])).toEqual([]);
   });
 });
