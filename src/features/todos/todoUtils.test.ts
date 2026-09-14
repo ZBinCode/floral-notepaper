@@ -5,10 +5,12 @@ import type { TodoItem, TodoList } from "./types";
 import {
   TODO_TAG_PALETTE,
   arrayMove,
+  buildReminderAt,
   filterTodoItemsByTag,
   groupTodoItems,
   hashString,
   parseTodoDate,
+  reminderTimeValue,
   reorderIdsAfterDrop,
   sortTodoItems,
   todoCountdown,
@@ -179,6 +181,34 @@ describe("filterTodoItemsByTag and toggleTagId", () => {
     expect(toggleTagId(base, "t3")).toEqual(["t1", "t2", "t3"]);
     expect(toggleTagId(base, "t1")).toEqual(["t2"]);
     expect(base).toEqual(["t1", "t2"]);
+  });
+});
+
+describe("buildReminderAt and reminderTimeValue", () => {
+  it("combines a local date and time into a UTC ISO timestamp", () => {
+    const iso = buildReminderAt("2026-09-14", "09:30");
+    expect(iso).not.toBeNull();
+    const parsed = new Date(iso!);
+    expect(parsed.getUTCHours() - parsed.getTimezoneOffset() / 60).not.toBeNaN();
+    // 本地 09:30 组装回本地时间应还原
+    expect(parsed.getHours()).toBe(9);
+    expect(parsed.getMinutes()).toBe(30);
+    expect(parsed.getFullYear()).toBe(2026);
+  });
+
+  it("returns null for missing parts or invalid values", () => {
+    expect(buildReminderAt(null, "09:30")).toBeNull();
+    expect(buildReminderAt("2026-09-14", "")).toBeNull();
+    expect(buildReminderAt("2026-02-30", "09:30")).toBeNull();
+    expect(buildReminderAt("2026-09-14", "24:00")).toBeNull();
+    expect(buildReminderAt("2026-09-14", "099")).toBeNull();
+  });
+
+  it("extracts local HH:mm from an ISO reminder", () => {
+    const iso = new Date(2026, 8, 14, 9, 5).toISOString();
+    expect(reminderTimeValue(iso)).toBe("09:05");
+    expect(reminderTimeValue(null)).toBe("");
+    expect(reminderTimeValue("not a date")).toBe("");
   });
 });
 

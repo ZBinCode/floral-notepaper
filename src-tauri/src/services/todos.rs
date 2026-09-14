@@ -1527,7 +1527,7 @@ mod tests {
             .expect("create list");
 
         let updated = store
-            .set_list_default_tags(&list.id, &[tag.id.clone()], now)
+            .set_list_default_tags(&list.id, std::slice::from_ref(&tag.id), now)
             .expect("set default tags");
         assert_eq!(updated.default_tag_ids, vec![tag.id.clone()]);
 

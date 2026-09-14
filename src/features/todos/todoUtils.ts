@@ -142,6 +142,31 @@ export function reorderIdsAfterDrop(
   return arrayMove(orderedIds, from, target);
 }
 
+/** 由本地日期 + "HH:mm" 组装提醒时刻（UTC ISO）；任一为空返回 null */
+export function buildReminderAt(dueDate: string | null | undefined, time: string): string | null {
+  if (!dueDate || !time) return null;
+  const date = parseTodoDate(dueDate);
+  if (!date) return null;
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  const local = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
+  const iso = local.toISOString();
+  return Number.isNaN(Date.parse(iso)) ? null : iso;
+}
+
+/** 从提醒时刻提取本地 "HH:mm" 作为时间输入框的显示值 */
+export function reminderTimeValue(remindAt: string | null | undefined): string {
+  if (!remindAt) return "";
+  const date = new Date(remindAt);
+  if (Number.isNaN(date.getTime())) return "";
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
 /** 以现有待办为基底构造全量更新请求（update 是替换语义） */
 export function saveRequestFromItem(
   item: TodoItem,

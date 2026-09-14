@@ -449,7 +449,8 @@
         "contain": "完整",
         "repeat": "平铺"
       }
-    }
+    },
+    "todoReminders": "待办提醒"
   },
   "tile": {
     "empty": "空"
@@ -485,7 +486,8 @@
       "unpin": "取消置顶",
       "delete": "删除",
       "due": "设置目标日",
-      "tags": "标签"
+      "tags": "标签",
+      "remind": "提醒时间（当日）"
     },
     "countdown": {
       "overdue": "已过期 {{count}} 天",

@@ -34,8 +34,10 @@ import {
 import type { TodoItem, TodoList, TodoTag } from "../features/todos/types";
 import {
   TODO_TAG_PALETTE,
+  buildReminderAt,
   filterTodoItemsByTag,
   groupTodoItems,
+  reminderTimeValue,
   reorderIdsAfterDrop,
   saveRequestFromItem,
   todoCountdown,
@@ -201,12 +203,13 @@ export function TodoBoard() {
     }
   };
 
-  const handleDueChange = async (item: TodoItem, value: string) => {
+  const handleDueAndReminder = async (item: TodoItem, dueDate: string, time: string) => {
     setDueEditingId(null);
-    const dueDate = value || null;
-    if (dueDate === (item.dueDate ?? null)) return;
+    const nextDue = dueDate || null;
+    const remindAt = buildReminderAt(nextDue, time);
+    if (nextDue === (item.dueDate ?? null) && remindAt === (item.remindAt ?? null)) return;
     try {
-      await updateTodoItem(item.id, saveRequestFromItem(item, { dueDate }));
+      await updateTodoItem(item.id, saveRequestFromItem(item, { dueDate: nextDue, remindAt }));
     } catch (error) {
       showToast(getTodoErrorMessage(error), "error");
     }
@@ -427,7 +430,9 @@ export function TodoBoard() {
                   onComplete={(item) => void handleComplete(item)}
                   onTogglePinned={(item) => void handleTogglePinned(item)}
                   onDelete={(item) => void handleDelete(item)}
-                  onDueChange={(item, value) => void handleDueChange(item, value)}
+                  onDueChange={(item, dueDate, time) =>
+                    void handleDueAndReminder(item, dueDate, time)
+                  }
                   onSetItemTags={(item, tagIds) => void handleSetItemTags(item, tagIds)}
                   onCreateTagAndAssign={(item, name) => void handleCreateTagAndAssign(item, name)}
                   onRenameList={async (id, name) => {
@@ -583,7 +588,7 @@ interface TodoListSectionProps {
   onComplete: (item: TodoItem) => void;
   onTogglePinned: (item: TodoItem) => void;
   onDelete: (item: TodoItem) => void;
-  onDueChange: (item: TodoItem, value: string) => void;
+  onDueChange: (item: TodoItem, dueDate: string, time: string) => void;
   onSetItemTags: (item: TodoItem, tagIds: string[]) => void;
   onCreateTagAndAssign: (item: TodoItem, name: string) => void;
   onRenameList: (id: string, name: string) => Promise<void>;
@@ -881,7 +886,7 @@ interface TodoItemRowProps {
   onComplete: (item: TodoItem) => void;
   onTogglePinned: (item: TodoItem) => void;
   onDelete: (item: TodoItem) => void;
-  onDueChange: (item: TodoItem, value: string) => void;
+  onDueChange: (item: TodoItem, dueDate: string, time: string) => void;
   onSetItemTags: (item: TodoItem, tagIds: string[]) => void;
   onCreateTagAndAssign: (item: TodoItem, name: string) => void;
   dueEditingId: string | null;
@@ -982,23 +987,78 @@ function TodoItemRow(props: TodoItemRowProps) {
             {countdownLabel && (
               <span className={`text-[10px] shrink-0 ${countdownClassName}`}>{countdownLabel}</span>
             )}
+            {item.remindAt && (
+              <span
+                className="shrink-0 text-ink-ghost"
+                title={
+                  t("todo.item.remind", { defaultValue: "提醒时间（当日）" }) +
+                  " " +
+                  reminderTimeValue(item.remindAt)
+                }
+              >
+                <svg
+                  width="9"
+                  height="9"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </span>
+            )}
           </div>
         )}
         {isDueEditing && (
-          <input
-            autoFocus
-            type="date"
-            value={item.dueDate ?? ""}
-            onChange={(event) => props.onDueChange(item, event.target.value)}
-            onBlur={() => props.onDueEditingChange(null)}
+          <div
+            className="flex items-center gap-1.5 p-1.5 rounded-md bg-paper/80 border border-paper-deep/40"
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 event.preventDefault();
                 props.onDueEditingChange(null);
               }
             }}
-            className="w-[132px] h-6 px-1 rounded-md bg-paper border border-bamboo/50 text-[11px] text-ink focus:outline-none"
-          />
+          >
+            <input
+              autoFocus
+              type="date"
+              value={item.dueDate ?? ""}
+              onChange={(event) =>
+                props.onDueChange(item, event.target.value, reminderTimeValue(item.remindAt))
+              }
+              className="w-[124px] h-6 px-1 rounded-md bg-paper border border-paper-deep/40 text-[11px] text-ink focus:outline-none focus:border-bamboo/60"
+            />
+            <input
+              type="time"
+              disabled={!item.dueDate}
+              value={reminderTimeValue(item.remindAt)}
+              title={t("todo.item.remind", { defaultValue: "提醒时间（当日）" })}
+              onChange={(event) =>
+                item.dueDate ? props.onDueChange(item, item.dueDate, event.target.value) : undefined
+              }
+              className="w-[92px] h-6 px-1 rounded-md bg-paper border border-paper-deep/40 text-[11px] text-ink disabled:opacity-40 focus:outline-none focus:border-bamboo/60"
+            />
+            <button
+              type="button"
+              onClick={() => props.onDueEditingChange(null)}
+              className="w-5 h-5 flex items-center justify-center rounded text-ink-ghost hover:text-bamboo hover:bg-bamboo-mist/60 transition-colors cursor-pointer"
+            >
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         )}
         {isTagEditing && (
           <div className="flex flex-col gap-1.5 p-1.5 rounded-md bg-paper/80 border border-paper-deep/40">

@@ -615,6 +615,7 @@ pub fn run() {
         .plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(file_path) = desktop::extract_file_arg(&args) {
@@ -639,6 +640,7 @@ pub fn run() {
             if !updater::platform::has_package_identity() {
                 updater::start_auto_check_scheduler(app.handle().clone());
             }
+            services::todo_reminders::start_scheduler(app.handle().clone());
             desktop::setup_desktop(app)?;
             Ok(())
         })

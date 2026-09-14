@@ -449,7 +449,8 @@
         "contain": "Contain",
         "repeat": "Repeat"
       }
-    }
+    },
+    "todoReminders": "Todo reminders"
   },
   "tile": {
     "empty": "Empty"
@@ -485,7 +486,8 @@
       "unpin": "Unpin",
       "delete": "Delete",
       "due": "Set target date",
-      "tags": "Tags"
+      "tags": "Tags",
+      "remind": "Reminder time (on due date)"
     },
     "countdown": {
       "overdue": "{{count}} days overdue",
